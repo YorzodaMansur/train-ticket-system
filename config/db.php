@@ -7,13 +7,15 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$host = '127.0.0.1;port=3307';
-$db   = 'train_tickets_db';
-$user = 'root';
-$pass = '';
+// Агар дар Railway бошад, тағйирёбандаҳои муҳитро мегирад; дар акси ҳол XAMPP (порти 3307)
+$host    = getenv('MYSQLHOST') ?: '127.0.0.1';
+$port    = getenv('MYSQLPORT') ?: '3307';
+$db      = getenv('MYSQLDATABASE') ?: 'train_tickets_db';
+$user    = getenv('MYSQLUSER') ?: 'root';
+$pass    = getenv('MYSQLPASSWORD') !== false ? getenv('MYSQLPASSWORD') : '';
 $charset = 'utf8mb4';
 
-$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=$charset";
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -25,7 +27,7 @@ try {
 } catch (\PDOException $e) {
     die('<div style="font-family: sans-serif; padding: 25px; background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; border-radius: 8px; max-width: 600px; margin: 40px auto; line-height: 1.6;">
         <h2 style="margin-top: 0;">Хатогӣ дар пайвастшавӣ ба базаи маълумот!</h2>
-        <p>Илтимос, санҷед, ки сервери MySQL (XAMPP / OpenServer) фаъол аст ва пойгоҳи додаҳо бо номи <strong>train_tickets_db</strong> дар phpMyAdmin сохта шудааст.</p>
+        <p>Илтимос, санҷед, ки сервери MySQL фаъол аст ва пойгоҳи додаҳо сохта шудааст.</p>
         <p><em>Паёми хатогӣ: ' . htmlspecialchars($e->getMessage()) . '</em></p>
     </div>');
 }
@@ -67,19 +69,27 @@ function currentUser() {
 }
 
 /**
+ * Муайян кардани роҳи асосии лоиҳа (XAMPP vs Railway)
+ */
+function baseUrl($path = '') {
+    $prefix = getenv('MYSQLHOST') ? '' : '/train_ticket_system';
+    return $prefix . '/' . ltrim($path, '/');
+}
+
+/**
  * Санҷиши дастрасӣ аз рӯи нақш (role)
  */
 function requireRole($role) {
     if (!isLoggedIn()) {
         $_SESSION['flash_error'] = 'Барои ворид шудан ба ин саҳифа аввал вориди система шавед!';
-        header('Location: /train_ticket_system/login.php');
+        header('Location: ' . baseUrl('login.php'));
         exit;
     }
     
     $user = currentUser();
     if ($user['role'] !== $role && $user['role'] !== 'admin') {
         $_SESSION['flash_error'] = 'Шумо ба ин бахш ҳуқуқи дастрасӣ надоред!';
-        header('Location: /train_ticket_system/index.php');
+        header('Location: ' . baseUrl('index.php'));
         exit;
     }
 }
